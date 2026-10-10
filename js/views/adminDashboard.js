@@ -250,6 +250,7 @@ export function createAdminDashboardView() {
                           </div>
                           <div style="font-size: 0.785rem; color: var(--color-text-muted);">
                             📍 <strong>${c.location}</strong> • <span class="badge badge-category" style="padding: 2px 6px; font-size: 0.7rem;">${c.category}</span>
+                            ${c.visibility === 'private' ? '<span class="badge" style="background:#F3E8FF;color:#6B21A8;border:1px solid #D8B4FE;padding:2px 6px;font-size:0.7rem;">🔒 Private</span>' : ''}
                           </div>
                         </td>
 

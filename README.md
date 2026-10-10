@@ -48,6 +48,10 @@
    - Prevents unauthorized access between Student, Admin, and Staff routes.
    - Includes a persistent **Demo Persona Switcher** for instant 1-click testing.
 
+9. **Public & Private Reports**:
+   - Students can choose public visibility for campus-wide viewing or private visibility for the submitter and admins only.
+   - Supabase row-level security restricts private complaints and their activity timeline/comments; staff and other students cannot read them.
+
 ---
 
 ## 📁 Project Structure
@@ -82,6 +86,8 @@
 ---
 
 ## 🏃 How to Run the App
+
+For Supabase-backed authentication and privacy enforcement, run `schema.sql` in the Supabase SQL Editor when setting up or updating the database.
 
 1. **Option A (Vite Dev Server)**:
    ```bash

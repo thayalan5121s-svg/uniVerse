@@ -92,6 +92,7 @@ function normalizeComplaintRow(row) {
     categoryId: row.category_id,
     location: row.location,
     specificSpot: row.specific_spot,
+    visibility: row.visibility || 'public',
     status: row.status,
     priority: row.priority,
     upvotes: row.upvotes || 1,
@@ -135,6 +136,16 @@ export const api = {
    * Fetch all complaints with computed priority metadata from Supabase
    */
   async getComplaints(filter = {}) {
+    const currentUser = stateManager.getState().currentUser;
+    const currentRole = (stateManager.getState().currentRole || currentUser?.role || 'guest').toLowerCase();
+    const canViewComplaint = complaint =>
+      complaint.visibility !== 'private' ||
+      currentRole === 'admin' ||
+      (currentUser && (
+        complaint.submittedBy?.id === currentUser.id ||
+        (complaint.submittedBy?.email && complaint.submittedBy.email === currentUser.email)
+      ));
+
     if (supabase) {
       try {
         let query = supabase
@@ -168,7 +179,9 @@ export const api = {
           // Merge local state complaints and upvotes so local toggles/tickets are never wiped out
           const localComplaints = stateManager.getComplaints();
           const remoteIds = new Set(complaints.map(c => c.id).concat(complaints.map(c => c.dbId)));
-          const localOnly = localComplaints.filter(l => !remoteIds.has(l.id) && !remoteIds.has(l.dbId));
+          const localOnly = localComplaints.filter(l =>
+            !remoteIds.has(l.id) && !remoteIds.has(l.dbId) && canViewComplaint(l)
+          );
 
           complaints = complaints.map(c => {
             const local = localComplaints.find(l => l.id === c.id || l.dbId === c.id || l.id === c.dbId);
@@ -183,7 +196,7 @@ export const api = {
             return c;
           });
 
-          complaints = [...localOnly, ...complaints];
+          complaints = [...localOnly, ...complaints].filter(canViewComplaint);
 
           complaints = complaints.map(c => ({
             ...c,
@@ -206,7 +219,7 @@ export const api = {
 
     // Local state fallback
     await delay();
-    let complaints = [...stateManager.getComplaints()];
+    let complaints = [...stateManager.getComplaints()].filter(canViewComplaint);
 
     complaints = complaints.map(c => ({
       ...c,
@@ -239,6 +252,16 @@ export const api = {
    * Get single complaint by ID
    */
   async getComplaintById(id) {
+    const currentUser = stateManager.getState().currentUser;
+    const currentRole = (stateManager.getState().currentRole || currentUser?.role || 'guest').toLowerCase();
+    const canViewComplaint = complaint =>
+      complaint.visibility !== 'private' ||
+      currentRole === 'admin' ||
+      (currentUser && (
+        complaint.submittedBy?.id === currentUser.id ||
+        (complaint.submittedBy?.email && complaint.submittedBy.email === currentUser.email)
+      ));
+
     if (supabase) {
       try {
         const { data, error } = await supabase
@@ -270,7 +293,7 @@ export const api = {
 
     await delay();
     const complaint = stateManager.getComplaintById(id);
-    if (!complaint) {
+    if (!complaint || !canViewComplaint(complaint)) {
       throw new Error(`Complaint with ID ${id} not found.`);
     }
     return {
@@ -301,6 +324,7 @@ export const api = {
             category_id: payload.categoryId || 'electrical',
             location: payload.location,
             specific_spot: payload.specificSpot || 'Not specified',
+            visibility: payload.visibility === 'private' ? 'private' : 'public',
             status: 'Submitted',
             priority: payload.priority || 'Medium',
             submitted_by: currentUser.id,
@@ -312,7 +336,8 @@ export const api = {
           .select()
           .single();
 
-        if (!error && created) {
+        if (error) throw error;
+        if (created) {
           // Add initial timeline entry
           await supabase.from('complaint_timeline').insert([{
             complaint_id: created.id,
@@ -330,8 +355,12 @@ export const api = {
 
           return { success: true, data: { ...payload, id: ticketNumber } };
         }
+        throw new Error('Supabase did not return the created complaint.');
       } catch (err) {
         console.warn('Supabase insert error, falling back to local state:', err);
+        if (payload.visibility === 'private') {
+          throw new Error(`Private report could not be saved to Supabase: ${err.message || 'Unknown database error'}`);
+        }
       }
     }
 
@@ -345,7 +374,9 @@ export const api = {
       location: payload.location,
       specificSpot: payload.specificSpot || 'Not specified',
       description: payload.description,
+      visibility: payload.visibility === 'private' ? 'private' : 'public',
       submittedBy: {
+        id: currentUser ? currentUser.id : 'anonymous',
         name: currentUser ? currentUser.name : 'Student',
         email: currentUser ? currentUser.email : 'student@campus.edu',
         rollNo: currentUser ? currentUser.rollNo : 'Student'
@@ -554,7 +585,9 @@ export const api = {
    */
   async findDuplicates(categoryId, location, titleQuery = '') {
     const res = await api.getComplaints();
-    const complaints = (res.data || []).filter(c => c.status !== 'Resolved' && c.status !== 'Rejected');
+    const complaints = (res.data || []).filter(c =>
+      c.visibility !== 'private' && c.status !== 'Resolved' && c.status !== 'Rejected'
+    );
 
     const duplicates = complaints.filter(c => {
       const sameLocation = c.location && location && c.location.toLowerCase().includes(location.toLowerCase());

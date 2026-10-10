@@ -50,16 +50,17 @@ export function createComplaintDetailView(params) {
                   ● ${complaint.status}
                 </span>
                 <span class="badge badge-category">${complaint.category}</span>
+                ${complaint.visibility === 'private' ? '<span class="badge" style="background:#F3E8FF;color:#6B21A8;border:1px solid #D8B4FE;">🔒 Private report</span>' : ''}
               </div>
               <h1 class="page-title" style="font-size: 1.75rem;">${complaint.title}</h1>
             </div>
 
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-              <button class="upvote-btn ${hasUpvoted ? 'upvoted' : ''}" id="detail-upvote-btn" style="padding: 8px 16px;">
+              ${complaint.visibility === 'private' ? '' : `<button class="upvote-btn ${hasUpvoted ? 'upvoted' : ''}" id="detail-upvote-btn" style="padding: 8px 16px;">
                 <span>▲</span>
                 <span class="upvote-count">${complaint.upvotes || 0}</span>
                 <span>${hasUpvoted ? 'Upvoted' : 'Upvote Issue'}</span>
-              </button>
+              </button>`}
               <a href="#/dashboard" class="btn btn-outline btn-sm">← Back</a>
             </div>
           </div>

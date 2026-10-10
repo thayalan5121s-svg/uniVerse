@@ -51,12 +51,22 @@ CREATE TABLE IF NOT EXISTS public.complaints (
   photo_url TEXT,
   audio_url TEXT,
   resolution_proof TEXT,
+  visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
   upvotes INTEGER NOT NULL DEFAULT 1,
   upvoted_by UUID[] NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   resolved_at TIMESTAMPTZ
 );
+
+ALTER TABLE public.complaints
+  ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'public';
+
+ALTER TABLE public.complaints
+  DROP CONSTRAINT IF EXISTS complaints_visibility_check;
+
+ALTER TABLE public.complaints
+  ADD CONSTRAINT complaints_visibility_check CHECK (visibility IN ('public', 'private'));
 
 -- COMPLAINT COMMENTS
 CREATE TABLE IF NOT EXISTS public.complaint_comments (
@@ -165,7 +175,11 @@ CREATE POLICY "Admins can manage categories" ON public.complaint_categories
 DROP POLICY IF EXISTS "Complaints read policy" ON public.complaints;
 CREATE POLICY "Complaints read policy" ON public.complaints
   FOR SELECT USING (
-    auth.role() = 'authenticated'
+    auth.role() = 'authenticated' AND (
+      visibility = 'public' OR
+      submitted_by = auth.uid() OR
+      public.get_user_role(auth.uid()) = 'admin'
+    )
   );
 
 DROP POLICY IF EXISTS "Complaints insert policy" ON public.complaints;
@@ -179,26 +193,52 @@ CREATE POLICY "Complaints update policy" ON public.complaints
   FOR UPDATE USING (
     auth.role() = 'authenticated' AND (
       submitted_by = auth.uid() OR
-      public.get_user_role(auth.uid()) IN ('staff', 'admin')
+      public.get_user_role(auth.uid()) = 'admin' OR
+      (visibility = 'public' AND public.get_user_role(auth.uid()) = 'staff')
+    )
+  )
+  WITH CHECK (
+    auth.role() = 'authenticated' AND (
+      submitted_by = auth.uid() OR
+      public.get_user_role(auth.uid()) = 'admin' OR
+      (visibility = 'public' AND public.get_user_role(auth.uid()) = 'staff')
     )
   );
 
 -- COMPLAINT COMMENTS POLICIES
 DROP POLICY IF EXISTS "Comments select policy" ON public.complaint_comments;
 CREATE POLICY "Comments select policy" ON public.complaint_comments
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (
+    auth.role() = 'authenticated' AND EXISTS (
+      SELECT 1 FROM public.complaints c
+      WHERE c.id = complaint_id
+    )
+  );
 
 DROP POLICY IF EXISTS "Comments insert policy" ON public.complaint_comments;
 CREATE POLICY "Comments insert policy" ON public.complaint_comments
   FOR INSERT WITH CHECK (
-    auth.role() = 'authenticated' AND author_id = auth.uid()
+    auth.role() = 'authenticated' AND author_id = auth.uid() AND EXISTS (
+      SELECT 1 FROM public.complaints c
+      WHERE c.id = complaint_id
+    )
   );
 
 -- COMPLAINT TIMELINE POLICIES
 DROP POLICY IF EXISTS "Timeline select policy" ON public.complaint_timeline;
 CREATE POLICY "Timeline select policy" ON public.complaint_timeline
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (
+    auth.role() = 'authenticated' AND EXISTS (
+      SELECT 1 FROM public.complaints c
+      WHERE c.id = complaint_id
+    )
+  );
 
 DROP POLICY IF EXISTS "Timeline insert policy" ON public.complaint_timeline;
 CREATE POLICY "Timeline insert policy" ON public.complaint_timeline
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+  FOR INSERT WITH CHECK (
+    auth.role() = 'authenticated' AND EXISTS (
+      SELECT 1 FROM public.complaints c
+      WHERE c.id = complaint_id
+    )
+  );

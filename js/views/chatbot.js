@@ -9,7 +9,7 @@ import { router } from '../router.js';
 
 export function createChatbotView() {
   // Conversational state machine
-  // step: 'greeting' | 'ask_category' | 'ask_location' | 'ask_description' | 'confirm_submission' | 'done'
+  // step: 'greeting' | 'ask_category' | 'ask_location' | 'ask_description' | 'ask_visibility' | 'confirm_submission' | 'done'
   let conversationState = {
     step: 'greeting',
     draft: {
@@ -17,7 +17,8 @@ export function createChatbotView() {
       categoryId: '',
       location: '',
       description: '',
-      title: ''
+      title: '',
+      visibility: 'public'
     }
   };
 
@@ -186,26 +187,57 @@ export function createChatbotView() {
         if (conversationState.step === 'ask_description') {
           conversationState.draft.description = userText;
           conversationState.draft.title = userText.length > 55 ? userText.substring(0, 52) + '...' : userText;
+          conversationState.step = 'ask_visibility';
+
+          appendMessage({
+            sender: 'bot',
+            text: 'Who should be able to view this report?',
+            options: ['🌐 Public — campus users can view', '🔒 Private — only you and admins can view']
+          });
+          return;
+        }
+
+        if (conversationState.step === 'ask_visibility') {
+          if (!lower.includes('private') && !lower.includes('public')) {
+            appendMessage({
+              sender: 'bot',
+              text: 'Please choose whether this report should be public or private.',
+              options: ['🌐 Public — campus users can view', '🔒 Private — only you and admins can view']
+            });
+            return;
+          }
+          conversationState.draft.visibility = lower.includes('private') ? 'private' : 'public';
           conversationState.step = 'confirm_submission';
 
           appendMessage({
             sender: 'bot',
-            text: `📋 **Ready to submit this ticket!**\n\n• **Category:** ${conversationState.draft.category}\n• **Location:** ${conversationState.draft.location}\n• **Summary:** ${conversationState.draft.title}\n\nShall I create this ticket now?`,
+            text: `📋 **Ready to submit this ticket!**\n\n• **Category:** ${conversationState.draft.category}\n• **Location:** ${conversationState.draft.location}\n• **Summary:** ${conversationState.draft.title}\n• **Visibility:** ${conversationState.draft.visibility}\n\nShall I create this ticket now?`,
             options: ['✅ Yes, Submit Ticket', '❌ Cancel']
           });
           return;
         }
 
         if (conversationState.step === 'confirm_submission') {
-          if (lower.includes('yes') || lower.includes('submit') || lower.includes('✅')) {
+          if (lower.includes('yes') || lower.includes('submit') || lower.includes('try again') || lower.includes('✅')) {
             // Call API to create complaint
-            const res = await api.createComplaint({
-              title: conversationState.draft.title,
-              categoryName: conversationState.draft.category,
-              categoryId: conversationState.draft.categoryId,
-              location: conversationState.draft.location,
-              description: conversationState.draft.description
-            });
+            let res;
+            try {
+              res = await api.createComplaint({
+                title: conversationState.draft.title,
+                categoryName: conversationState.draft.category,
+                categoryId: conversationState.draft.categoryId,
+                location: conversationState.draft.location,
+                description: conversationState.draft.description,
+                visibility: conversationState.draft.visibility
+              });
+            } catch (err) {
+              appendMessage({
+                sender: 'bot',
+                text: `I couldn't submit this ${conversationState.draft.visibility} report: ${err.message || 'Please try again.'}`,
+                options: ['✅ Try Again', '❌ Cancel']
+              });
+              return;
+            }
 
             conversationState.step = 'done';
 
@@ -261,7 +293,7 @@ export function createChatbotView() {
       resetBtn?.addEventListener('click', () => {
         conversationState = {
           step: 'greeting',
-          draft: { category: '', categoryId: '', location: '', description: '', title: '' }
+          draft: { category: '', categoryId: '', location: '', description: '', title: '', visibility: 'public' }
         };
         messages.length = 0;
         messages.push({

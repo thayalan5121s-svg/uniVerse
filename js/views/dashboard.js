@@ -154,6 +154,7 @@ export function createDashboardView() {
                         <span class="badge badge-${statusClass}">● ${c.status}</span>
                         <span class="badge badge-${priorityClass}">${c.priority} Priority</span>
                         <span class="badge badge-category">${c.category}</span>
+                        ${c.visibility === 'private' ? '<span class="badge" style="background:#F3E8FF;color:#6B21A8;border:1px solid #D8B4FE;">🔒 Private</span>' : ''}
                         ${c.audioUrl ? `<span class="badge" style="background: #EFF6FF; color: var(--color-primary); border: 1px solid #BFDBFE; font-size: 0.72rem;">🎙️ Audio</span>` : ''}
                         <span style="font-size: 0.75rem; color: var(--color-text-light); font-weight: 700;">#${c.id}</span>
                       </div>
@@ -176,11 +177,15 @@ export function createDashboardView() {
 
                     <!-- Right Column: Upvote & Detail Action -->
                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0;">
-                      <button class="upvote-btn ${hasUpvoted ? 'upvoted' : ''}" data-upvote-id="${c.id}">
-                        <span>▲</span>
-                        <span class="upvote-count">${c.upvotes || 0}</span>
-                        <span>${hasUpvoted ? 'Upvoted' : 'Upvote'}</span>
-                      </button>
+                      ${c.visibility === 'private' ? `
+                        <span style="font-size:0.8rem;color:var(--color-text-muted);">🔒 Private to you and admins</span>
+                      ` : `
+                        <button class="upvote-btn ${hasUpvoted ? 'upvoted' : ''}" data-upvote-id="${c.id}">
+                          <span>▲</span>
+                          <span class="upvote-count">${c.upvotes || 0}</span>
+                          <span>${hasUpvoted ? 'Upvoted' : 'Upvote'}</span>
+                        </button>
+                      `}
 
                       <a href="#/complaints/${c.id}" class="btn btn-outline btn-sm">
                         Track Status →

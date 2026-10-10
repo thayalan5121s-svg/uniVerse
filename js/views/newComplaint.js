@@ -83,6 +83,17 @@ export function createNewComplaintView() {
                 <input type="text" id="complaint-title-input" class="form-control" placeholder="e.g. Broken AC compressor unit blowing hot air" required>
               </div>
 
+              <div class="form-group" style="margin: 18px 0;">
+                <label class="form-label" for="complaint-visibility-select">Who can view this report?</label>
+                <select id="complaint-visibility-select" class="form-control">
+                  <option value="public" selected>Public — visible to campus users</option>
+                  <option value="private">Private — visible only to you and admins</option>
+                </select>
+                <p id="complaint-visibility-help" style="font-size: 0.8rem; color: var(--color-text-muted); margin: 6px 0 0;">
+                  Public reports can be seen and upvoted by other campus users.
+                </p>
+              </div>
+
               <!-- 4. Multi-Modal Input Tabs (Text / Photo / Voice) -->
               <div style="margin-bottom: 20px;">
                 <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--color-border); padding-bottom: 8px; margin-bottom: 14px;">
@@ -283,6 +294,16 @@ export function createNewComplaintView() {
           checkDuplicates();
         });
       }
+
+      const visibilitySelect = document.getElementById('complaint-visibility-select');
+      visibilitySelect?.addEventListener('change', () => {
+        const help = document.getElementById('complaint-visibility-help');
+        if (help) {
+          help.textContent = visibilitySelect.value === 'private'
+            ? 'Your private report is visible only to you and admins. Other students and staff cannot view it.'
+            : 'Public reports can be seen and upvoted by other campus users.';
+        }
+      });
 
       // Input Mode Switchers (Text / Photo / Voice)
       document.querySelectorAll('[data-mode]').forEach(btn => {
@@ -572,11 +593,26 @@ export function createNewComplaintView() {
           specificSpot: spot || selectedLocation,
           description: description || title,
           priority: isEmergency ? 'Critical' : 'Medium',
+          visibility: document.getElementById('complaint-visibility-select')?.value === 'private' ? 'private' : 'public',
           photoUrl: uploadedPhotoPreview || (inputMode === 'photo' ? 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=600&q=80' : null),
           audioUrl: recordedAudioDataUrl || null
         };
 
-        const result = await api.createComplaint(payload);
+        let result;
+        try {
+          result = await api.createComplaint(payload);
+        } catch (err) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Submit & Queue for Triage';
+          window.dispatchEvent(new CustomEvent('campuscare-toast', {
+            detail: {
+              type: 'error',
+              title: 'Report Not Submitted',
+              message: err.message || 'The report could not be saved. Please try again.'
+            }
+          }));
+          return;
+        }
 
         window.dispatchEvent(new CustomEvent('campuscare-toast', {
           detail: {
