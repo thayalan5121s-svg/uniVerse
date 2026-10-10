@@ -342,7 +342,8 @@ export function createAdminDashboardView() {
           const staff = stateManager.getState().users.find(u => u.id === staffId);
           if (staff) {
             try {
-              const result = await api.assignTechnician(complaintId, staff);
+              const complaint = stateManager.getComplaintById(complaintId);
+              const result = await api.assignTechnician(complaint?.dbId || complaintId, staff);
               window.dispatchEvent(new CustomEvent('campuscare-toast', {
                 detail: {
                   type: result.timelineWarning ? 'warning' : 'success',

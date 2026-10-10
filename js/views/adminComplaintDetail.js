@@ -7,6 +7,7 @@ import { router } from '../router.js';
 
 export function createAdminComplaintDetailView(params) {
   const complaintId = params.id;
+  let complaintDatabaseId = complaintId;
 
   return {
     async render() {
@@ -14,6 +15,7 @@ export function createAdminComplaintDetailView(params) {
       try {
         const res = await api.getComplaintById(complaintId);
         complaint = res.data;
+        complaintDatabaseId = complaint.dbId || complaintId;
       } catch {
         return `
           <div class="page-container" style="text-align: center; padding-top: 60px;">
@@ -202,16 +204,15 @@ export function createAdminComplaintDetailView(params) {
         const staffId = document.getElementById('admin-assign-staff').value;
         const sla = document.getElementById('admin-sla-select').value;
         const note = document.getElementById('admin-note-input').value.trim();
-
         try {
           if (staffId) {
             const staff = stateManager.getState().users.find(u => u.id === staffId);
             if (staff) {
-              await api.assignTechnician(complaintId, staff, sla);
+              await api.assignTechnician(complaintDatabaseId, staff, sla);
             }
           }
 
-          const result = await api.updateStatus(complaintId, newStatus, note, 'Admin');
+          const result = await api.updateStatus(complaintDatabaseId, newStatus, note, 'Admin');
 
           window.dispatchEvent(new CustomEvent('campuscare-toast', {
             detail: {
