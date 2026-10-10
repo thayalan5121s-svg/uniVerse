@@ -63,13 +63,18 @@ export function createStudentCommunityView() {
       const user = stateManager.getState().currentUser;
       return `
         <div class="page-container" style="max-width:900px;">
-          <div class="page-header">
+          <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
             <div>
               <h1 class="page-title">Student Community</h1>
               <p class="page-subtitle">Ask for help, share a doubt, or post campus events with fellow students.</p>
             </div>
+            <button type="button" class="btn btn-primary" id="community-open-create-btn">＋ Create Post</button>
           </div>
-          <div class="card" style="padding:22px;margin-bottom:20px;">
+          <dialog id="community-create-dialog" style="width:min(600px,calc(100% - 32px));max-height:90vh;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow-card);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;">
+              <h2 style="margin:0;color:var(--color-secondary);">Create a Post</h2>
+              <button type="button" class="btn btn-outline btn-sm" id="community-cancel-create-btn">Cancel</button>
+            </div>
             <form id="community-post-form">
               <div class="form-group">
                 <label class="form-label" for="community-post-title">Post title</label>
@@ -90,7 +95,7 @@ export function createStudentCommunityView() {
               </div>
               <p style="font-size:.8rem;color:var(--color-text-muted);margin:12px 0 0;">Only signed-in student accounts can read or publish community posts.</p>
             </form>
-          </div>
+          </dialog>
           <div id="community-posts" style="display:flex;flex-direction:column;gap:14px;" aria-live="polite">
             ${loading ? '<div class="card" style="padding:24px;">Loading posts…</div>' : renderPosts()}
           </div>
@@ -99,6 +104,10 @@ export function createStudentCommunityView() {
     },
 
     onMount() {
+      const dialog = document.getElementById('community-create-dialog');
+      document.getElementById('community-open-create-btn')?.addEventListener('click', () => dialog.showModal());
+      document.getElementById('community-cancel-create-btn')?.addEventListener('click', () => dialog.close());
+
       document.getElementById('community-post-form')?.addEventListener('submit', async event => {
         event.preventDefault();
         const form = event.currentTarget;
@@ -112,6 +121,7 @@ export function createStudentCommunityView() {
             tag: formData.get('tag')
           });
           form.reset();
+          dialog.close();
           posts = await api.getStudentCommunityPosts();
           document.getElementById('community-posts').innerHTML = renderPosts();
           showMessage('success', 'Post published', 'Your post is now visible to students.');
