@@ -13,7 +13,7 @@ export function createSignupView() {
           <div style="text-align: center; margin-bottom: 24px;">
             <div class="brand-icon" style="margin: 0 auto 12px; width: 42px; height: 42px; font-size: 1.2rem;">⚡</div>
             <h1 style="font-size: 1.85rem; font-weight: 700; color: var(--color-secondary); margin-bottom: 6px;">Create Account</h1>
-            <p style="color: var(--color-text-muted); font-size: 0.9rem;">Register to access Student, Staff, or Authority Portals</p>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem;">Create a student account to report and track campus issues.</p>
           </div>
 
           <div class="card" style="padding: 28px; border: 1px solid var(--color-border); box-shadow: var(--shadow-card);">
@@ -158,7 +158,10 @@ export function createSignupView() {
         } catch (err) {
           console.error('Supabase signup error:', err);
           if (errorBanner) {
-            errorBanner.innerText = `⚠️ Signup Error: ${err.message || 'Registration failed.'}`;
+            const message = (err.message || '').toLowerCase().includes('rate limit')
+              ? 'Supabase has temporarily limited signup emails. Wait before trying again, or sign in if you may already have an account. To avoid this limit during testing, configure custom SMTP in Supabase under Project Settings → Authentication → SMTP Settings.'
+              : `Signup Error: ${err.message || 'Registration failed.'}`;
+            errorBanner.innerText = `⚠️ ${message}`;
             errorBanner.style.display = 'block';
           }
           if (submitBtn) {
