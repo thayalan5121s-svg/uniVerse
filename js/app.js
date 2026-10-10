@@ -55,6 +55,7 @@ class App {
 
     // Admin Routes
     router.register('admin', createAdminDashboardView, { allowedRoles: ['admin'], title: 'Admin AI Queue' });
+    router.register('admin/reports', createAdminDashboardView, { allowedRoles: ['admin'], title: 'Campus Reports' });
     router.register('admin/analytics', createAdminAnalyticsView, { allowedRoles: ['admin'], title: 'Predictive Analytics' });
     router.register('admin/complaints/:id', (params) => createAdminComplaintDetailView(params), { allowedRoles: ['admin'], title: 'Admin Ticket Triage' });
 

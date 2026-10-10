@@ -491,10 +491,24 @@ a:hover {
 }
 
 .dashboard-complaint-card .track-status {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.8rem;
   font-weight: 700;
   color: #475569;
   margin-top: 6px;
+  padding: 8px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.dashboard-complaint-card .track-status:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .dashboard-complaint-card .upvote-btn {
@@ -503,6 +517,12 @@ a:hover {
   padding: 7px 12px;
   font-size: 0.75rem;
   box-shadow: none;
+}
+
+.dashboard-complaint-card .upvote-btn.upvoted {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border-color: var(--color-primary);
 }
 
 .dashboard-complaint-card h3 {

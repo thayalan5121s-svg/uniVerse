@@ -17,6 +17,7 @@ export function createAdminDashboardView() {
       const state = stateManager.getState();
       const adminUser = state.currentUser || { name: 'Admin', designation: 'Chief Estate Officer' };
       const staffList = state.users.filter(u => u.role === 'staff');
+      const isReportsPage = window.location.hash.replace(/\/+$/, '') === '#/admin/reports';
 
       const res = await api.getComplaints({
         status: statusFilter,
@@ -73,6 +74,11 @@ export function createAdminDashboardView() {
                   </a>
                 </li>
                 <li>
+                  <a href="#/admin/reports" class="sidebar-link" data-route="/admin/reports">
+                    <span class="icon">📋</span> Reports
+                  </a>
+                </li>
+                <li>
                   <a href="#/admin/analytics" class="sidebar-link" data-route="/admin/analytics">
                     <span class="icon">📈</span> Predictive Analytics
                   </a>
@@ -100,9 +106,11 @@ export function createAdminDashboardView() {
           <main class="admin-main-content">
             <div class="page-header">
               <div>
-                <h1 class="page-title">AI-Prioritized Complaint Queue</h1>
+                <h1 class="page-title">${isReportsPage ? 'Campus Reports' : 'AI-Prioritized Complaint Queue'}</h1>
                 <p class="page-subtitle">
-                  Sorted dynamically by Urgency Keywords + Wait Duration + Student Upvote Impact
+                  ${isReportsPage
+                    ? 'Review, search, and triage campus facility reports.'
+                    : 'Sorted dynamically by Urgency Keywords + Wait Duration + Student Upvote Impact'}
                 </p>
               </div>
 

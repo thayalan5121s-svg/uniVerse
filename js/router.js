@@ -162,12 +162,13 @@ class Router {
   }
 
   updateActiveNavs(currentHash) {
+    const currentRoute = currentHash.replace(/^#\/?/, '').replace(/\/+$/, '');
     const navLinks = document.querySelectorAll('[data-route]');
     navLinks.forEach(link => {
-      const targetRoute = link.getAttribute('data-route');
-      if (currentHash.includes(targetRoute) && targetRoute !== '') {
+      const targetRoute = (link.getAttribute('data-route') || '').replace(/^#\/?/, '').replace(/\/+$/, '');
+      if (currentRoute === targetRoute && targetRoute !== '') {
         link.classList.add('active');
-      } else if (targetRoute === '' && (currentHash === '#' || currentHash === '#/' || currentHash === '#/dashboard')) {
+      } else if (targetRoute === '' && (!currentRoute || currentRoute === 'dashboard')) {
         link.classList.add('active');
       } else {
         link.classList.remove('active');

@@ -177,7 +177,7 @@ export function createDashboardView() {
                         </button>
                       `}
 
-                      <div class="track-status">Track Status →</div>
+                      <a href="#/complaints/${c.id}" class="track-status">Track Status →</a>
                     </div>
                   </div>
                 </div>
