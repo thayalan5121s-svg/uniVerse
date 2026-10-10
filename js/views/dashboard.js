@@ -3,7 +3,6 @@
  */
 import { stateManager } from '../state.js';
 import { api } from '../api.js';
-import { router } from '../router.js';
 
 export function createDashboardView() {
   let activeTab = 'All';
@@ -200,24 +199,34 @@ export function createDashboardView() {
       `;
     },
 
+    async refresh() {
+      const viewRoot = document.getElementById('view-root');
+      if (!viewRoot) return;
+
+      viewRoot.innerHTML = await this.render();
+      this.onMount();
+    },
+
     onMount() {
       // Tab Filters
       document.querySelectorAll('#tab-filters-container button').forEach(btn => {
         btn.addEventListener('click', (e) => {
           activeTab = e.currentTarget.getAttribute('data-tab');
-          router.handleRoute();
+          this.refresh();
         });
       });
 
       // Search Handler
       const searchInput = document.getElementById('dashboard-search-input');
       if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
+        searchInput.addEventListener('input', async (e) => {
           searchQuery = e.target.value;
-          // Re-render complaints list without full page reload
-          const feed = document.getElementById('complaints-list-feed');
-          if (feed) {
-            router.handleRoute();
+          const cursorPosition = searchInput.selectionStart;
+          await this.refresh();
+          const refreshedSearch = document.getElementById('dashboard-search-input');
+          refreshedSearch?.focus();
+          if (refreshedSearch && cursorPosition !== null) {
+            refreshedSearch.setSelectionRange(cursorPosition, cursorPosition);
           }
         });
       }
@@ -238,7 +247,7 @@ export function createDashboardView() {
             if (countEl) countEl.innerText = currentVal + 1;
           }
           await api.upvoteComplaint(complaintId);
-          router.handleRoute();
+          await this.refresh();
         });
       });
     }
