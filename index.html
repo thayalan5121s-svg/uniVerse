@@ -19,6 +19,109 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/style.css" />
 
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(13, 148, 136, 0.14), transparent 24%),
+        linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    #app {
+      width: min(100%, 1460px);
+      min-height: 100vh;
+      position: relative;
+      padding: 20px;
+    }
+
+    .app-loading-screen {
+      width: min(100%, 720px);
+      margin: 10vh auto 0;
+      padding: 32px 28px;
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 24px 60px -30px rgba(15, 23, 42, 0.35);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app-loading-screen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent 0%, rgba(59, 130, 246, 0.12) 50%, transparent 100%);
+      transform: translateX(-100%);
+      animation: shimmer 1.8s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      100% { transform: translateX(100%); }
+    }
+
+    .loading-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(37, 99, 235, 0.08);
+      color: #1d4ed8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      border: 1px solid rgba(37, 99, 235, 0.12);
+      margin-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .loading-spinner {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      border: 3px solid rgba(148, 163, 184, 0.2);
+      border-top-color: #2563eb;
+      animation: spin 850ms linear infinite;
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .app-loading-screen h2 {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      color: #0f172a;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-loading-screen p {
+      margin: 0;
+      font-size: 0.98rem;
+      color: #64748b;
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+
   <!-- External Libraries (CDN) -->
   <!-- jsPDF & jsPDF-AutoTable for hardcopy report download -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -32,8 +135,11 @@
   <!-- Main Application Root -->
   <div id="app">
     <!-- Fallback Skeleton while JS initializes -->
-    <div style="padding: 40px; text-align: center; font-family: sans-serif; color: #1E1B4B;">
+    <div class="app-loading-screen" aria-live="polite">
+      <div class="loading-badge">Campus Operations</div>
+      <div class="loading-spinner" aria-hidden="true"></div>
       <h2>Loading UniVerse...</h2>
+      <p>Preparing your smarter campus workflow experience.</p>
     </div>
   </div>
 
