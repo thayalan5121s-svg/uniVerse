@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/Kadapa/(.*)", "destination": "/Kadapa/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
