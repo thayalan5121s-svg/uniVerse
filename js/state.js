@@ -216,6 +216,16 @@ class StateManager {
     return complaint;
   }
 
+  removeComplaint(id) {
+    const initialLength = this.state.complaints.length;
+    this.state.complaints = this.state.complaints.filter(
+      complaint => complaint.id !== id && complaint.ticket_number !== id && complaint.dbId !== id
+    );
+    if (this.state.complaints.length === initialLength) return false;
+    this.saveState();
+    return true;
+  }
+
   updateComplaint(id, updates) {
     if (!id) return null;
     const index = this.state.complaints.findIndex(c => c.id === id || c.ticket_number === id || c.dbId === id);

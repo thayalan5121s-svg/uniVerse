@@ -290,9 +290,14 @@ export function createAdminDashboardView() {
 
                         <!-- Actions -->
                         <td>
-                          <a href="#/admin/complaints/${c.id}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.785rem;">
-                            Triage →
-                          </a>
+                          <div style="display:flex;gap:6px;align-items:center;">
+                            <a href="#/admin/complaints/${c.id}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.785rem;">
+                              Triage →
+                            </a>
+                            <button type="button" class="btn btn-outline btn-sm" data-delete-report="${c.id}" style="padding:4px 10px;font-size:0.785rem;color:#b91c1c;border-color:#fecaca;">
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     `;
@@ -337,6 +342,36 @@ export function createAdminDashboardView() {
       document.getElementById('admin-search-input')?.addEventListener('input', (e) => {
         searchQuery = e.target.value;
         router.handleRoute();
+      });
+
+      document.querySelectorAll('[data-delete-report]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const reportId = button.getAttribute('data-delete-report');
+          if (!window.confirm(`Permanently delete report #${reportId}? Its comments and timeline will also be removed.`)) return;
+
+          button.disabled = true;
+          try {
+            await api.deleteComplaint(reportId);
+            window.dispatchEvent(new CustomEvent('campuscare-toast', {
+              detail: {
+                type: 'success',
+                title: 'Report deleted',
+                message: `Report #${reportId} was permanently removed.`
+              }
+            }));
+            await router.handleRoute();
+          } catch (err) {
+            console.error('Report deletion failed:', err);
+            window.dispatchEvent(new CustomEvent('campuscare-toast', {
+              detail: {
+                type: 'error',
+                title: 'Could not delete report',
+                message: err.message || 'Check your admin access and Supabase DELETE policy.'
+              }
+            }));
+            button.disabled = false;
+          }
+        });
       });
 
       // Quick Assign Dropdown Handlers

@@ -17,15 +17,22 @@ export function createDashboardView() {
       const res = await api.getComplaints();
       const complaints = res.data || [];
 
-      const myComplaints = complaints.filter(c => c.submittedBy?.email === user.email);
+      const isMine = complaint =>
+        complaint.submittedBy?.id === user.id ||
+        (complaint.submittedBy?.email && complaint.submittedBy.email === user.email);
+      const myComplaints = complaints.filter(isMine);
       const activeCount = complaints.filter(c => c.status !== 'Resolved' && c.status !== 'Rejected').length;
       const resolvedCount = complaints.filter(c => c.status === 'Resolved').length;
 
       // Filter complaints based on activeTab & search
       let filtered = [...complaints];
       if (activeTab === 'My Complaints') {
-        filtered = filtered.filter(c => c.submittedBy?.email === user.email);
-      } else if (activeTab === 'In Progress') {
+        filtered = filtered.filter(isMine);
+      } else if (role === 'student') {
+        filtered = filtered.filter(c => c.visibility !== 'private');
+      }
+
+      if (activeTab === 'In Progress') {
         filtered = filtered.filter(c => c.status === 'In Progress' || c.status === 'Assigned');
       } else if (activeTab === 'Resolved') {
         filtered = filtered.filter(c => c.status === 'Resolved');

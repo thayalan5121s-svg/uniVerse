@@ -28,6 +28,7 @@ export function createStudentCommunityView() {
 
     return posts.map(post => {
       const upvoted = (post.upvoted_by || []).includes(userId);
+      const isAuthor = post.author?.id === userId;
       const author = post.author?.name || 'Student';
       const date = new Date(post.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
       return `
@@ -43,6 +44,13 @@ export function createStudentCommunityView() {
               <span>▲</span><span>${Number(post.upvotes) || 0}</span><span>${upvoted ? 'Upvoted' : 'Upvote'}</span>
             </button>
           </div>
+          ${isAuthor ? `
+            <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+              <button type="button" class="btn btn-outline btn-sm" data-community-delete="${escapeHtml(post.id)}" style="color:#b91c1c;border-color:#fecaca;">
+                Delete post
+              </button>
+            </div>
+          ` : ''}
         </article>
       `;
     }).join('');
@@ -133,6 +141,24 @@ export function createStudentCommunityView() {
       });
 
       document.getElementById('community-posts')?.addEventListener('click', async event => {
+        const deleteButton = event.target.closest('[data-community-delete]');
+        if (deleteButton) {
+          const postId = deleteButton.getAttribute('data-community-delete');
+          if (!window.confirm('Delete this post? This action cannot be undone.')) return;
+
+          deleteButton.disabled = true;
+          try {
+            await api.deleteStudentCommunityPost(postId);
+            posts = await api.getStudentCommunityPosts();
+            document.getElementById('community-posts').innerHTML = renderPosts();
+            showMessage('success', 'Post deleted', 'Your post has been removed.');
+          } catch (error) {
+            showMessage('error', 'Could not delete post', error.message);
+            deleteButton.disabled = false;
+          }
+          return;
+        }
+
         const button = event.target.closest('[data-community-upvote]');
         if (!button) return;
         button.disabled = true;

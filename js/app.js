@@ -7,7 +7,6 @@ import { router } from './router.js';
 
 // Import Views
 import { createLandingView } from './views/landing.js';
-import { createSignupView } from './views/signup.js';
 import { createDashboardView } from './views/dashboard.js';
 import { createNewComplaintView } from './views/newComplaint.js';
 import { createComplaintDetailView } from './views/complaintDetail.js';
@@ -44,7 +43,6 @@ class App {
     // Public / Auth
     router.register('', createLandingView, { allowedRoles: ['guest', 'student', 'admin', 'staff'], title: 'Welcome' });
     router.register('login', createLandingView, { allowedRoles: ['guest', 'student', 'admin', 'staff'], title: 'Sign In' });
-    router.register('signup', createSignupView, { allowedRoles: ['guest', 'student'], title: 'Student Sign Up' });
 
     // Student & Campus Dashboard Routes
     router.register('dashboard', createDashboardView, { allowedRoles: ['student', 'staff', 'admin'], title: 'Campus Dashboard' });

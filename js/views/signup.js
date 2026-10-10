@@ -32,8 +32,8 @@ export function createSignupView() {
               </div>
 
               <div class="form-group">
-                <label class="form-label">Campus Email <span class="required">*</span></label>
-                <input type="email" id="signup-email" class="form-control" placeholder="name@campus.edu" required>
+                <label class="form-label">Email Address <span class="required">*</span></label>
+                <input type="email" id="signup-email" class="form-control" placeholder="you@example.com" autocomplete="email" required>
               </div>
 
               <div class="form-group">
@@ -103,7 +103,7 @@ export function createSignupView() {
 
         const role = 'student';
         const name = document.getElementById('signup-name').value.trim();
-        const email = document.getElementById('signup-email').value.trim();
+        const email = document.getElementById('signup-email').value.trim().toLowerCase();
         const password = document.getElementById('signup-password').value;
         const rollNo = document.getElementById('signup-roll').value.trim();
         const department = document.getElementById('signup-dept').value;
@@ -158,9 +158,13 @@ export function createSignupView() {
         } catch (err) {
           console.error('Supabase signup error:', err);
           if (errorBanner) {
-            const message = (err.message || '').toLowerCase().includes('rate limit')
+            const errorMessage = err.message || '';
+            const normalizedError = errorMessage.toLowerCase();
+            const message = normalizedError.includes('rate limit')
               ? 'Supabase has temporarily limited signup emails. Wait before trying again, or sign in if you may already have an account. To avoid this limit during testing, configure custom SMTP in Supabase under Project Settings → Authentication → SMTP Settings.'
-              : `Signup Error: ${err.message || 'Registration failed.'}`;
+              : normalizedError.includes('email address') && normalizedError.includes('invalid')
+                ? `Supabase rejected this email address. Gmail and other valid email addresses are accepted by the app; check the Supabase project's Authentication email settings for restrictions. Details: ${errorMessage}`
+                : `Signup Error: ${errorMessage || 'Registration failed.'}`;
             errorBanner.innerText = `⚠️ ${message}`;
             errorBanner.style.display = 'block';
           }

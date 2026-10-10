@@ -249,6 +249,13 @@ CREATE POLICY "Complaints update policy" ON public.complaints
     )
   );
 
+GRANT DELETE ON public.complaints TO authenticated;
+DROP POLICY IF EXISTS "Admins can delete complaints" ON public.complaints;
+CREATE POLICY "Admins can delete complaints" ON public.complaints
+  FOR DELETE USING (
+    auth.uid() IS NOT NULL AND public.get_user_role(auth.uid()) = 'admin'
+  );
+
 -- COMPLAINT COMMENTS POLICIES
 DROP POLICY IF EXISTS "Comments select policy" ON public.complaint_comments;
 CREATE POLICY "Comments select policy" ON public.complaint_comments
@@ -288,7 +295,7 @@ CREATE POLICY "Timeline insert policy" ON public.complaint_timeline
   );
 
 -- STUDENT COMMUNITY POLICIES
-GRANT SELECT, INSERT ON public.student_community_posts TO authenticated;
+GRANT SELECT, INSERT, DELETE ON public.student_community_posts TO authenticated;
 
 DROP POLICY IF EXISTS "Students can read community posts" ON public.student_community_posts;
 CREATE POLICY "Students can read community posts" ON public.student_community_posts
@@ -299,6 +306,13 @@ CREATE POLICY "Students can read community posts" ON public.student_community_po
 DROP POLICY IF EXISTS "Students can create community posts" ON public.student_community_posts;
 CREATE POLICY "Students can create community posts" ON public.student_community_posts
   FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND author_id = auth.uid() AND
+    public.get_user_role(auth.uid()) = 'student'
+  );
+
+DROP POLICY IF EXISTS "Students can delete their own community posts" ON public.student_community_posts;
+CREATE POLICY "Students can delete their own community posts" ON public.student_community_posts
+  FOR DELETE USING (
     auth.uid() IS NOT NULL AND author_id = auth.uid() AND
     public.get_user_role(auth.uid()) = 'student'
   );

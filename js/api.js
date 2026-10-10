@@ -193,6 +193,22 @@ export const api = {
     return data;
   },
 
+  async deleteStudentCommunityPost(postId) {
+    const authUser = await getAuthenticatedStudent();
+
+    const { data, error } = await supabase
+      .from('student_community_posts')
+      .delete()
+      .eq('id', postId)
+      .eq('author_id', authUser.id)
+      .select('id');
+    if (error) throw new Error(`Could not delete your post: ${error.message}`);
+    if (!data?.length) {
+      throw new Error('Post was not deleted. Ensure the student community DELETE policy is applied in Supabase, and that you are signed in as the post author.');
+    }
+    return data[0];
+  },
+
   /**
    * Fetch all complaints with computed priority metadata from Supabase
    */
@@ -307,6 +323,50 @@ export const api = {
     }
 
     return { success: true, data: complaints, count: complaints.length };
+  },
+
+  async deleteComplaint(id) {
+    const state = stateManager.getState();
+    const role = (state.currentRole || state.currentUser?.role || '').toLowerCase();
+    if (role !== 'admin') {
+      throw new Error('Only admins can delete reports.');
+    }
+
+    if (supabase) {
+      const ticketQuery = supabase.from('complaints').select('id, ticket_number');
+      const { data: ticket, error: ticketError } = /^\d{4,}$/.test(id) || /^CMP-\d+$/i.test(id)
+        ? await ticketQuery.eq('ticket_number', id).maybeSingle()
+        : await ticketQuery.eq('id', id).maybeSingle();
+      if (ticketError) throw new Error(`Could not load report ${id}: ${ticketError.message}`);
+
+      if (!ticket) {
+        const localReport = stateManager.getComplaintById(id);
+        if (localReport && !localReport.dbId) {
+          stateManager.removeComplaint(id);
+          return { success: true, id };
+        }
+        throw new Error(`Report ${id} was not found in the database.`);
+      }
+
+      const { data, error } = await supabase
+        .from('complaints')
+        .delete()
+        .eq('id', ticket.id)
+        .select('id');
+      if (error) throw new Error(`Could not delete report ${id}: ${error.message}`);
+      if (!data?.length) {
+        throw new Error(`Report ${id} was not deleted. Check the admin role and Supabase DELETE policy.`);
+      }
+
+      stateManager.removeComplaint(ticket.ticket_number);
+      stateManager.removeComplaint(ticket.id);
+      return { success: true, id: ticket.ticket_number };
+    }
+
+    if (!stateManager.removeComplaint(id)) {
+      throw new Error(`Report ${id} was not found.`);
+    }
+    return { success: true, id };
   },
 
   /**

@@ -33,9 +33,6 @@ export function createLandingView() {
                   <input type="password" id="login-pass" class="form-control" placeholder="Enter your password" required>
                 </div>
                 <button type="submit" id="login-submit-btn" class="btn btn-primary w-full login-submit">Sign In</button>
-                <div class="signin-footer">
-                  Don't have an account? <a href="#/signup">Register as Student</a>
-                </div>
               </form>
             </div>
           </div>
