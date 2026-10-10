@@ -366,10 +366,8 @@ export const api = {
         }
         throw new Error('Supabase did not return the created complaint.');
       } catch (err) {
-        console.warn('Supabase insert error, falling back to local state:', err);
-        if (payload.visibility === 'private' || authUser || !currentUser || currentUser.id.includes('-')) {
-          throw new Error(`Report could not be saved to Supabase: ${err.message || 'Unknown database error'}`);
-        }
+        console.error('Supabase complaint insert failed:', err);
+        throw new Error(`Report could not be saved to Supabase: ${err.message || 'Unknown database error'}`);
       }
     }
 

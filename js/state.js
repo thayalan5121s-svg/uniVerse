@@ -47,6 +47,8 @@ class StateManager {
       if (session) {
         this.session = session;
         await this.syncProfile(session.user);
+      } else {
+        this.setCurrentUser(null);
       }
 
       supabase.auth.onAuthStateChange(async (event, session) => {
@@ -61,6 +63,7 @@ class StateManager {
       });
     } catch (err) {
       console.warn('Supabase auth initialization skipped or failed:', err);
+      this.setCurrentUser(null);
     }
   }
 
@@ -116,8 +119,11 @@ class StateManager {
     });
 
     if (error) throw error;
-    if (data.user) {
+    this.session = data.session;
+    if (data.user && data.session) {
       await this.syncProfile(data.user);
+    } else {
+      this.setCurrentUser(null);
     }
     return data;
   }
@@ -131,7 +137,8 @@ class StateManager {
     });
 
     if (error) throw error;
-    if (data.user) {
+    this.session = data.session;
+    if (data.user && data.session) {
       await this.syncProfile(data.user);
     }
     return data;

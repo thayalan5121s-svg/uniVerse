@@ -19,6 +19,7 @@ export function createSignupView() {
           <div class="card" style="padding: 28px; border: 1px solid var(--color-border); box-shadow: var(--shadow-card);">
             <!-- Dynamic DOM Error Alert Container -->
             <div id="signup-error-banner" style="display: none; background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; padding: 10px 14px; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 500; margin-bottom: 16px;"></div>
+            <div id="signup-status-banner" role="status" style="display: none; background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; padding: 10px 14px; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 500; margin-bottom: 16px;"></div>
 
             <form id="signup-form">
               <p style="margin-bottom: 16px; color: var(--color-text-muted); font-size: 0.875rem;">
@@ -91,8 +92,10 @@ export function createSignupView() {
         e.preventDefault();
         const submitBtn = document.getElementById('signup-submit-btn');
         const errorBanner = document.getElementById('signup-error-banner');
+        const statusBanner = document.getElementById('signup-status-banner');
 
         if (errorBanner) errorBanner.style.display = 'none';
+        if (statusBanner) statusBanner.style.display = 'none';
         if (submitBtn) {
           submitBtn.disabled = true;
           submitBtn.innerHTML = '⏳ Creating Account...';
@@ -108,7 +111,7 @@ export function createSignupView() {
         const roomNo = document.getElementById('signup-room')?.value.trim() || '';
 
         try {
-          await stateManager.signUp({
+          const result = await stateManager.signUp({
             email,
             password,
             name,
@@ -118,6 +121,19 @@ export function createSignupView() {
             hostel,
             roomNo
           });
+
+          if (!result.session) {
+            stateManager.setCurrentUser(null);
+            if (statusBanner) {
+              statusBanner.textContent = `Account created for ${email}. Check your inbox and confirm your email, then sign in before submitting a report.`;
+              statusBanner.style.display = 'block';
+            }
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = 'Create Account & Sign In →';
+            }
+            return;
+          }
 
           window.dispatchEvent(new CustomEvent('campuscare-toast', {
             detail: {
