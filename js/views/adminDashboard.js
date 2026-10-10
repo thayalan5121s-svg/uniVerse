@@ -336,19 +336,34 @@ export function createAdminDashboardView() {
         dropdown.addEventListener('change', async (e) => {
           const complaintId = e.currentTarget.getAttribute('data-complaint-id');
           const staffId = e.target.value;
+          const dropdownElement = e.currentTarget;
           if (!staffId) return;
 
           const staff = stateManager.getState().users.find(u => u.id === staffId);
           if (staff) {
-            await api.assignTechnician(complaintId, staff);
-            window.dispatchEvent(new CustomEvent('campuscare-toast', {
-              detail: {
-                type: 'success',
-                title: 'Technician Assigned',
-                message: `Assigned #${complaintId} to ${staff.name}. Simulated email dispatched.`
-              }
-            }));
-            router.handleRoute();
+            try {
+              const result = await api.assignTechnician(complaintId, staff);
+              window.dispatchEvent(new CustomEvent('campuscare-toast', {
+                detail: {
+                  type: result.timelineWarning ? 'warning' : 'success',
+                  title: result.timelineWarning ? 'Assigned; Timeline Failed' : 'Technician Assigned',
+                  message: result.timelineWarning
+                    ? `Assigned #${complaintId}, but its activity log failed: ${result.timelineWarning}`
+                    : `Assigned #${complaintId} to ${staff.name}.`
+                }
+              }));
+              router.handleRoute();
+            } catch (err) {
+              console.error('Quick technician assignment failed:', err);
+              window.dispatchEvent(new CustomEvent('campuscare-toast', {
+                detail: {
+                  type: 'error',
+                  title: 'Assignment Failed',
+                  message: err.message || 'Could not assign this ticket. Check your admin access and try again.'
+                }
+              }));
+              dropdownElement.value = '';
+            }
           }
         });
       });

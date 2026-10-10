@@ -203,24 +203,39 @@ export function createAdminComplaintDetailView(params) {
         const sla = document.getElementById('admin-sla-select').value;
         const note = document.getElementById('admin-note-input').value.trim();
 
-        if (staffId) {
-          const staff = stateManager.getState().users.find(u => u.id === staffId);
-          if (staff) {
-            await api.assignTechnician(complaintId, staff, sla);
+        try {
+          if (staffId) {
+            const staff = stateManager.getState().users.find(u => u.id === staffId);
+            if (staff) {
+              await api.assignTechnician(complaintId, staff, sla);
+            }
           }
+
+          const result = await api.updateStatus(complaintId, newStatus, note, 'Admin');
+
+          window.dispatchEvent(new CustomEvent('campuscare-toast', {
+            detail: {
+              type: result.timelineWarning ? 'warning' : 'success',
+              title: result.timelineWarning ? 'Status Updated; Timeline Failed' : 'Triage Updated Successfully',
+              message: result.timelineWarning
+                ? `Ticket status was updated, but its activity log failed: ${result.timelineWarning}`
+                : `Ticket #${complaintId} status changed to ${newStatus}.`
+            }
+          }));
+
+          router.navigate('/admin');
+        } catch (err) {
+          console.error('Admin triage update failed:', err);
+          window.dispatchEvent(new CustomEvent('campuscare-toast', {
+            detail: {
+              type: 'error',
+              title: 'Triage Update Failed',
+              message: err.message || 'Could not update this ticket. Check your admin access and try again.'
+            }
+          }));
+          btn.disabled = false;
+          btn.innerHTML = '💾 Save Changes & Notify Student';
         }
-
-        await api.updateStatus(complaintId, newStatus, note, 'Dr. Radhika Menon (Admin)');
-
-        window.dispatchEvent(new CustomEvent('campuscare-toast', {
-          detail: {
-            type: 'success',
-            title: 'Triage Updated Successfully',
-            message: `Ticket #${complaintId} status changed to ${newStatus}. Simulated email sent.`
-          }
-        }));
-
-        router.navigate(`/admin`);
       });
     }
   };

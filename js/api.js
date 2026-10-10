@@ -425,43 +425,51 @@ export const api = {
    */
   async updateStatus(id, newStatus, note = '', actorName = 'Admin') {
     if (supabase) {
-      try {
-        const { data: ticket } = await supabase
-          .from('complaints')
-          .select('id, ticket_number, submitted_by')
-          .or(`ticket_number.eq.${id},id.eq.${id}`)
-          .single();
+      const { data: ticket, error: ticketError } = await supabase
+        .from('complaints')
+        .select('id, ticket_number, submitted_by')
+        .or(`ticket_number.eq.${id},id.eq.${id}`)
+        .single();
 
-        if (ticket) {
-          await supabase
-            .from('complaints')
-            .update({
-              status: newStatus,
-              updated_at: new Date().toISOString(),
-              ...(note ? { resolution_proof: note } : {}),
-              ...(newStatus === 'Resolved' ? { resolved_at: new Date().toISOString() } : {})
-            })
-            .eq('id', ticket.id);
+      if (ticketError) throw new Error(`Could not load ticket ${id}: ${ticketError.message}`);
 
-          await supabase.from('complaint_timeline').insert([{
-            complaint_id: ticket.id,
-            step: newStatus,
-            title: `Status updated to ${newStatus}`,
-            description: note || `Ticket marked as ${newStatus} by ${actorName}.`,
-            actor: actorName
-          }]);
+      const { data: updatedTicket, error: updateError } = await supabase
+        .from('complaints')
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+          ...(note ? { resolution_proof: note } : {}),
+          ...(newStatus === 'Resolved' ? { resolved_at: new Date().toISOString() } : {})
+        })
+        .eq('id', ticket.id)
+        .select('id')
+        .single();
 
-          api.sendEmailNotification({
-            to: 'student@campus.edu',
-            subject: `[Update] Ticket #${id} is now ${newStatus}`,
-            message: `Your complaint status has moved to: ${newStatus}. Note: ${note || 'Technician update.'}`
-          });
-
-          return { success: true };
-        }
-      } catch (err) {
-        console.warn('Supabase update status error:', err);
+      if (updateError) {
+        throw new Error(`Could not update ticket ${id}: ${updateError.message}`);
       }
+      if (!updatedTicket) {
+        throw new Error(`Ticket ${id} was not updated. Check the admin role and Supabase update policy.`);
+      }
+
+      const { error: timelineError } = await supabase.from('complaint_timeline').insert([{
+        complaint_id: ticket.id,
+        step: newStatus,
+        title: `Status updated to ${newStatus}`,
+        description: note || `Ticket marked as ${newStatus} by ${actorName}.`,
+        actor: actorName
+      }]);
+      if (timelineError) {
+        console.error('Ticket status saved but timeline update failed:', timelineError);
+      }
+
+      api.sendEmailNotification({
+        to: 'student@campus.edu',
+        subject: `[Update] Ticket #${id} is now ${newStatus}`,
+        message: `Your complaint status has moved to: ${newStatus}. Note: ${note || 'Technician update.'}`
+      });
+
+      return { success: true, data: updatedTicket, timelineWarning: timelineError?.message };
     }
 
     // Local fallback
@@ -497,38 +505,46 @@ export const api = {
    */
   async assignTechnician(id, staffUser, estimatedTime = 'Within 24 Hours') {
     if (supabase) {
-      try {
-        const { data: ticket } = await supabase
-          .from('complaints')
-          .select('id, status')
-          .or(`ticket_number.eq.${id},id.eq.${id}`)
-          .single();
+      const { data: ticket, error: ticketError } = await supabase
+        .from('complaints')
+        .select('id, status')
+        .or(`ticket_number.eq.${id},id.eq.${id}`)
+        .single();
 
-        if (ticket) {
-          const nextStatus = ticket.status === 'Submitted' ? 'Assigned' : ticket.status;
-          await supabase
-            .from('complaints')
-            .update({
-              assigned_to: staffUser.id,
-              status: nextStatus,
-              estimated_resolution_time: estimatedTime,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', ticket.id);
+      if (ticketError) throw new Error(`Could not load ticket ${id}: ${ticketError.message}`);
 
-          await supabase.from('complaint_timeline').insert([{
-            complaint_id: ticket.id,
-            step: 'Assigned',
-            title: 'Technician Assigned',
-            description: `Assigned to ${staffUser.name} (${staffUser.department}). ETA: ${estimatedTime}`,
-            actor: 'Admin'
-          }]);
+      const nextStatus = ticket.status === 'Submitted' ? 'Assigned' : ticket.status;
+      const { data: updatedTicket, error: updateError } = await supabase
+        .from('complaints')
+        .update({
+          assigned_to: staffUser.id,
+          status: nextStatus,
+          estimated_resolution_time: estimatedTime,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', ticket.id)
+        .select('id')
+        .single();
 
-          return { success: true };
-        }
-      } catch (err) {
-        console.warn('Supabase assign technician error:', err);
+      if (updateError) {
+        throw new Error(`Could not assign ticket ${id}: ${updateError.message}`);
       }
+      if (!updatedTicket) {
+        throw new Error(`Ticket ${id} was not assigned. Check the admin role and Supabase update policy.`);
+      }
+
+      const { error: timelineError } = await supabase.from('complaint_timeline').insert([{
+        complaint_id: ticket.id,
+        step: 'Assigned',
+        title: 'Technician Assigned',
+        description: `Assigned to ${staffUser.name} (${staffUser.department}). ETA: ${estimatedTime}`,
+        actor: 'Admin'
+      }]);
+      if (timelineError) {
+        console.error('Technician assignment saved but timeline update failed:', timelineError);
+      }
+
+      return { success: true, data: updatedTicket, timelineWarning: timelineError?.message };
     }
 
     // Local fallback
