@@ -311,9 +311,18 @@ export const api = {
   async createComplaint(payload) {
     const currentUser = stateManager.getState().currentUser;
     const ticketNumber = `CMP-${Math.floor(1000 + Math.random() * 9000)}`;
+    let authUser = null;
 
-    if (supabase && currentUser && currentUser.id && currentUser.id.includes('-')) {
+    if (supabase) {
       try {
+        const { data, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        authUser = data.user;
+
+        if (!authUser) {
+          throw new Error('Please sign in to your account before submitting a report.');
+        }
+
         const { data: created, error } = await supabase
           .from('complaints')
           .insert([{
@@ -327,11 +336,11 @@ export const api = {
             visibility: payload.visibility === 'private' ? 'private' : 'public',
             status: 'Submitted',
             priority: payload.priority || 'Medium',
-            submitted_by: currentUser.id,
+            submitted_by: authUser.id,
             photo_url: payload.photoUrl || null,
             audio_url: payload.audioUrl || null,
             upvotes: 1,
-            upvoted_by: [currentUser.id]
+            upvoted_by: [authUser.id]
           }])
           .select()
           .single();
@@ -344,11 +353,11 @@ export const api = {
             step: 'Submitted',
             title: 'Complaint Registered',
             description: 'Ticket initiated via student portal.',
-            actor: currentUser.name || 'Student'
+            actor: currentUser?.name || authUser.user_metadata?.name || 'Student'
           }]);
 
           api.sendEmailNotification({
-            to: currentUser.email || 'student@campus.edu',
+            to: currentUser?.email || authUser.email || 'student@campus.edu',
             subject: `UniVerse: Ticket #${ticketNumber} Logged Successfully`,
             message: `Your issue "${payload.title}" has been registered.`
           });
@@ -358,8 +367,8 @@ export const api = {
         throw new Error('Supabase did not return the created complaint.');
       } catch (err) {
         console.warn('Supabase insert error, falling back to local state:', err);
-        if (payload.visibility === 'private') {
-          throw new Error(`Private report could not be saved to Supabase: ${err.message || 'Unknown database error'}`);
+        if (payload.visibility === 'private' || authUser || !currentUser || currentUser.id.includes('-')) {
+          throw new Error(`Report could not be saved to Supabase: ${err.message || 'Unknown database error'}`);
         }
       }
     }

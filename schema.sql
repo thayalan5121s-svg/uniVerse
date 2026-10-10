@@ -118,7 +118,7 @@ BEGIN
     new.id,
     COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
-    COALESCE(new.raw_user_meta_data->>'role', 'student'),
+    'student',
     new.raw_user_meta_data->>'roll_no',
     new.raw_user_meta_data->>'department',
     new.raw_user_meta_data->>'hostel',
@@ -127,8 +127,7 @@ BEGIN
   )
   ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
-    email = EXCLUDED.email,
-    role = EXCLUDED.role;
+    email = EXCLUDED.email;
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -154,15 +153,29 @@ ALTER TABLE public.complaint_timeline ENABLE ROW LEVEL SECURITY;
 -- 7. RLS POLICIES
 
 -- PROFILES POLICIES
-DROP POLICY IF EXISTS "Public profiles select" ON public.profiles;
+DO $$
+DECLARE
+  existing_policy RECORD;
+BEGIN
+  FOR existing_policy IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'profiles'
+  LOOP
+    EXECUTE format('DROP POLICY %I ON public.profiles', existing_policy.policyname);
+  END LOOP;
+END;
+$$;
+
 CREATE POLICY "Public profiles select" ON public.profiles
   FOR SELECT USING (auth.role() = 'authenticated');
 
-DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles
-  FOR UPDATE USING (auth.uid() = id);
+  FOR UPDATE USING (auth.uid() = id)
+  WITH CHECK (
+    auth.uid() = id AND role = public.get_user_role(auth.uid())
+  );
 
-DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile" ON public.profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
@@ -176,33 +189,44 @@ CREATE POLICY "Admins can manage categories" ON public.complaint_categories
   FOR ALL USING (public.get_user_role(auth.uid()) = 'admin');
 
 -- COMPLAINTS POLICIES
-DROP POLICY IF EXISTS "Complaints read policy" ON public.complaints;
+DO $$
+DECLARE
+  existing_policy RECORD;
+BEGIN
+  FOR existing_policy IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'complaints'
+  LOOP
+    EXECUTE format('DROP POLICY %I ON public.complaints', existing_policy.policyname);
+  END LOOP;
+END;
+$$;
+
 CREATE POLICY "Complaints read policy" ON public.complaints
   FOR SELECT USING (
-    auth.role() = 'authenticated' AND (
+    auth.uid() IS NOT NULL AND (
       visibility = 'public' OR
       submitted_by = auth.uid() OR
       public.get_user_role(auth.uid()) = 'admin'
     )
   );
 
-DROP POLICY IF EXISTS "Complaints insert policy" ON public.complaints;
 CREATE POLICY "Complaints insert policy" ON public.complaints
   FOR INSERT WITH CHECK (
-    auth.role() = 'authenticated' AND submitted_by = auth.uid()
+    auth.uid() IS NOT NULL AND submitted_by = auth.uid()
   );
 
-DROP POLICY IF EXISTS "Complaints update policy" ON public.complaints;
 CREATE POLICY "Complaints update policy" ON public.complaints
   FOR UPDATE USING (
-    auth.role() = 'authenticated' AND (
+    auth.uid() IS NOT NULL AND (
       submitted_by = auth.uid() OR
       public.get_user_role(auth.uid()) = 'admin' OR
       (visibility = 'public' AND public.get_user_role(auth.uid()) = 'staff')
     )
   )
   WITH CHECK (
-    auth.role() = 'authenticated' AND (
+    auth.uid() IS NOT NULL AND (
       submitted_by = auth.uid() OR
       public.get_user_role(auth.uid()) = 'admin' OR
       (visibility = 'public' AND public.get_user_role(auth.uid()) = 'staff')

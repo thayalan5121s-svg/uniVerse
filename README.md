@@ -51,6 +51,7 @@
 9. **Public & Private Reports**:
    - Students can choose public visibility for campus-wide viewing or private visibility for the submitter and admins only.
    - Supabase row-level security restricts private complaints and their activity timeline/comments; staff and other students cannot read them.
+   - New self-registered accounts are students; staff/admin roles must be assigned by a trusted administrator.
 
 ---
 

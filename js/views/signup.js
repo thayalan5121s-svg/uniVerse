@@ -1,6 +1,6 @@
 /**
  * View: User Signup connected to Supabase Auth & Profiles
- * Allows registering as Student, Staff Technician, or Campus Authority/Admin
+ * Allows student self-registration; staff and admin roles are assigned by an administrator
  */
 import { stateManager } from '../state.js';
 import { router } from '../router.js';
@@ -21,15 +21,9 @@ export function createSignupView() {
             <div id="signup-error-banner" style="display: none; background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; padding: 10px 14px; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 500; margin-bottom: 16px;"></div>
 
             <form id="signup-form">
-              <!-- Account Role Selector -->
-              <div class="form-group">
-                <label class="form-label">Portal Account Type / Role <span class="required">*</span></label>
-                <select id="signup-role" class="form-control" required style="font-weight: 600;">
-                  <option value="student">Student Portal (Report & Track Issues)</option>
-                  <option value="staff">Staff / Technician Portal (Resolve Work Orders)</option>
-                  <option value="admin">Authority / Admin Portal (Triage Queue & Analytics)</option>
-                </select>
-              </div>
+              <p style="margin-bottom: 16px; color: var(--color-text-muted); font-size: 0.875rem;">
+                New accounts are registered as students. Staff and admin access must be assigned by an administrator.
+              </p>
 
               <div class="form-group">
                 <label class="form-label">Full Name <span class="required">*</span></label>
@@ -93,21 +87,6 @@ export function createSignupView() {
     },
 
     onMount() {
-      const roleSelect = document.getElementById('signup-role');
-      const studentFields = document.getElementById('student-extra-fields');
-      const rollLabel = document.getElementById('roll-label');
-
-      roleSelect?.addEventListener('change', (e) => {
-        const selected = e.target.value;
-        if (selected === 'student') {
-          if (studentFields) studentFields.style.display = 'grid';
-          if (rollLabel) rollLabel.innerText = 'Roll Number';
-        } else {
-          if (studentFields) studentFields.style.display = 'none';
-          if (rollLabel) rollLabel.innerText = selected === 'staff' ? 'Technician ID' : 'Officer ID';
-        }
-      });
-
       document.getElementById('signup-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const submitBtn = document.getElementById('signup-submit-btn');
@@ -119,7 +98,7 @@ export function createSignupView() {
           submitBtn.innerHTML = '⏳ Creating Account...';
         }
 
-        const role = document.getElementById('signup-role').value;
+        const role = 'student';
         const name = document.getElementById('signup-name').value.trim();
         const email = document.getElementById('signup-email').value.trim();
         const password = document.getElementById('signup-password').value;
