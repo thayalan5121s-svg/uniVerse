@@ -63,6 +63,10 @@ ALTER TABLE public.complaints
   ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'public';
 
 ALTER TABLE public.complaints
+  ADD COLUMN IF NOT EXISTS photo_url TEXT,
+  ADD COLUMN IF NOT EXISTS audio_url TEXT;
+
+ALTER TABLE public.complaints
   DROP CONSTRAINT IF EXISTS complaints_visibility_check;
 
 ALTER TABLE public.complaints
@@ -242,3 +246,5 @@ CREATE POLICY "Timeline insert policy" ON public.complaint_timeline
       WHERE c.id = complaint_id
     )
   );
+
+NOTIFY pgrst, 'reload schema';
