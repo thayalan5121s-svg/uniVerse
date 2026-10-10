@@ -94,6 +94,21 @@ CREATE TABLE IF NOT EXISTS public.complaint_timeline (
   timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- STUDENT COMMUNITY POSTS
+CREATE TABLE IF NOT EXISTS public.student_community_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  author_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 120),
+  body TEXT NOT NULL CHECK (char_length(body) BETWEEN 1 AND 3000),
+  tag TEXT NOT NULL CHECK (tag IN ('Help', 'Doubt', 'Events/Hackathon', 'Something else')),
+  upvotes INTEGER NOT NULL DEFAULT 0 CHECK (upvotes >= 0),
+  upvoted_by UUID[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS student_community_posts_created_at_idx
+  ON public.student_community_posts (created_at DESC);
+
 -- 3. SEED DEFAULT CATEGORIES
 INSERT INTO public.complaint_categories (id, name, icon, department) VALUES
   ('electrical', 'Electrical & Power', '⚡', 'Electrical & HVAC Maintenance'),
@@ -149,6 +164,7 @@ ALTER TABLE public.complaint_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.complaints ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.complaint_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.complaint_timeline ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_community_posts ENABLE ROW LEVEL SECURITY;
 
 -- 7. RLS POLICIES
 
@@ -270,5 +286,60 @@ CREATE POLICY "Timeline insert policy" ON public.complaint_timeline
       WHERE c.id = complaint_id
     )
   );
+
+-- STUDENT COMMUNITY POLICIES
+GRANT SELECT, INSERT ON public.student_community_posts TO authenticated;
+
+DROP POLICY IF EXISTS "Students can read community posts" ON public.student_community_posts;
+CREATE POLICY "Students can read community posts" ON public.student_community_posts
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND public.get_user_role(auth.uid()) = 'student'
+  );
+
+DROP POLICY IF EXISTS "Students can create community posts" ON public.student_community_posts;
+CREATE POLICY "Students can create community posts" ON public.student_community_posts
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND author_id = auth.uid() AND
+    public.get_user_role(auth.uid()) = 'student'
+  );
+
+CREATE OR REPLACE FUNCTION public.toggle_student_community_upvote(target_post_id UUID)
+RETURNS TABLE (upvotes INTEGER, upvoted BOOLEAN)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  voter_id UUID := auth.uid();
+BEGIN
+  IF voter_id IS NULL OR public.get_user_role(voter_id) <> 'student' THEN
+    RAISE EXCEPTION 'Only signed-in students can upvote community posts'
+      USING ERRCODE = '42501';
+  END IF;
+
+  RETURN QUERY
+  UPDATE public.student_community_posts AS post
+  SET
+    upvoted_by = CASE
+      WHEN voter_id = ANY(post.upvoted_by)
+        THEN array_remove(post.upvoted_by, voter_id)
+      ELSE array_append(post.upvoted_by, voter_id)
+    END,
+    upvotes = CASE
+      WHEN voter_id = ANY(post.upvoted_by)
+        THEN GREATEST(0, post.upvotes - 1)
+      ELSE post.upvotes + 1
+    END
+  WHERE post.id = target_post_id
+  RETURNING post.upvotes, voter_id = ANY(post.upvoted_by);
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Community post not found';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.toggle_student_community_upvote(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.toggle_student_community_upvote(UUID) TO authenticated;
 
 NOTIFY pgrst, 'reload schema';

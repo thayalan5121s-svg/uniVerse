@@ -17,6 +17,7 @@ import { createAdminAnalyticsView } from './views/adminAnalytics.js';
 import { createAdminComplaintDetailView } from './views/adminComplaintDetail.js';
 import { createStaffDashboardView } from './views/staffDashboard.js';
 import { createStaffComplaintDetailView } from './views/staffComplaintDetail.js';
+import { createStudentCommunityView } from './views/studentCommunity.js';
 
 class App {
   constructor() {
@@ -50,6 +51,7 @@ class App {
     router.register('complaints/new', createNewComplaintView, { allowedRoles: ['student'], title: 'Report Issue' });
     router.register('complaints/:id', (params) => createComplaintDetailView(params), { allowedRoles: ['student', 'admin', 'staff'], title: 'Ticket Tracking' });
     router.register('chatbot', createChatbotView, { allowedRoles: ['student'], title: 'CareBot AI Assistant' });
+    router.register('community', createStudentCommunityView, { allowedRoles: ['student'], title: 'Student Community' });
 
     // Admin Routes
     router.register('admin', createAdminDashboardView, { allowedRoles: ['admin'], title: 'Admin AI Queue' });
@@ -84,6 +86,7 @@ class App {
             <li><a href="#/dashboard" class="nav-link-item" data-route="/dashboard">Dashboard</a></li>
             <li><a href="#/complaints/new" class="nav-link-item" data-route="/complaints/new">Report Issue</a></li>
             <li><a href="#/chatbot" class="nav-link-item" data-route="/chatbot">UniVerse Assistant</a></li>
+            <li><a href="#/community" class="nav-link-item" data-route="/community">Student Community</a></li>
           </ul>
 
           <div style="display: flex; align-items: center; gap: 12px;">
@@ -119,6 +122,12 @@ class App {
               <a href="#/chatbot" class="mobile-nav-link" data-route="/chatbot">
                 <span class="icon">💬</span>
                 <span>Assistant</span>
+              </a>
+            </li>
+            <li>
+              <a href="#/community" class="mobile-nav-link" data-route="/community">
+                <span class="icon">🤝</span>
+                <span>Community</span>
               </a>
             </li>
           </ul>
@@ -234,4 +243,3 @@ if (document.readyState === 'loading') {
 } else {
   bootstrapApp();
 }
-

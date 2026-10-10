@@ -138,7 +138,61 @@ function findComplaintRow(id, columns) {
     : query.eq('id', id).single();
 }
 
+async function getAuthenticatedStudent() {
+  if (!supabase) throw new Error('Student Community requires a Supabase connection.');
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error('Sign in with a student account to use the community.');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', authData.user.id)
+    .single();
+  if (profileError) throw new Error(`Could not verify student access: ${profileError.message}`);
+  if (profile.role !== 'student') throw new Error('Only student accounts can use the community.');
+  return authData.user;
+}
+
 export const api = {
+  async getStudentCommunityPosts() {
+    await getAuthenticatedStudent();
+
+    const { data, error } = await supabase
+      .from('student_community_posts')
+      .select('id, title, body, tag, upvotes, upvoted_by, created_at, author:profiles!student_community_posts_author_id_fkey(id, name, avatar)')
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(`Could not load community posts: ${error.message}`);
+    return data || [];
+  },
+
+  async createStudentCommunityPost({ title, body, tag }) {
+    const authUser = await getAuthenticatedStudent();
+
+    const { data, error } = await supabase
+      .from('student_community_posts')
+      .insert({
+        author_id: authUser.id,
+        title: title.trim(),
+        body: body.trim(),
+        tag
+      })
+      .select('id, title, body, tag, upvotes, upvoted_by, created_at, author:profiles!student_community_posts_author_id_fkey(id, name, avatar)')
+      .single();
+    if (error) throw new Error(`Could not publish your post: ${error.message}`);
+    return data;
+  },
+
+  async toggleStudentCommunityUpvote(postId) {
+    await getAuthenticatedStudent();
+
+    const { data, error } = await supabase.rpc('toggle_student_community_upvote', {
+      target_post_id: postId
+    });
+    if (error) throw new Error(`Could not update your upvote: ${error.message}`);
+    return data;
+  },
+
   /**
    * Fetch all complaints with computed priority metadata from Supabase
    */

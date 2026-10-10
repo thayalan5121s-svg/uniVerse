@@ -54,6 +54,10 @@
    - New self-registered accounts are students; staff/admin roles must be assigned by a trusted administrator.
    - If Supabase email confirmation is enabled, students must confirm their address and sign in before submitting reports.
 
+10. **Student Community Portal**:
+   - Authenticated student accounts can publish posts tagged `Help`, `Doubt`, `Events/Hackathon`, or `Something else` and upvote posts.
+   - The portal is restricted by app routing and Supabase row-level security; staff, admins, and guests cannot view or post there.
+
 ---
 
 ## 📁 Project Structure
