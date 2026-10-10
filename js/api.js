@@ -131,6 +131,13 @@ function normalizeComplaintRow(row) {
   };
 }
 
+function findComplaintRow(id, columns) {
+  const query = supabase.from('complaints').select(columns);
+  return /^\d{4,}$/.test(id) || /^CMP-\d+$/i.test(id)
+    ? query.eq('ticket_number', id).single()
+    : query.eq('id', id).single();
+}
+
 export const api = {
   /**
    * Fetch all complaints with computed priority metadata from Supabase
@@ -264,18 +271,15 @@ export const api = {
 
     if (supabase) {
       try {
-        const { data, error } = await supabase
-          .from('complaints')
-          .select(`
+        const { data, error } = await findComplaintRow(id, `
             *,
             profiles:submitted_by(id, name, email, roll_no),
             assigned_profile:assigned_to(id, name, department),
             complaint_comments(*),
             complaint_timeline(*)
-          `)
-          .or(`ticket_number.eq.${id},id.eq.${id}`)
-          .single();
+          `);
 
+        if (error) throw error;
         if (!error && data) {
           const complaint = normalizeComplaintRow(data);
           return {
@@ -425,11 +429,7 @@ export const api = {
    */
   async updateStatus(id, newStatus, note = '', actorName = 'Admin') {
     if (supabase) {
-      const { data: ticket, error: ticketError } = await supabase
-        .from('complaints')
-        .select('id, ticket_number, submitted_by')
-        .or(`ticket_number.eq.${id},id.eq.${id}`)
-        .single();
+      const { data: ticket, error: ticketError } = await findComplaintRow(id, 'id, ticket_number, submitted_by');
 
       if (ticketError) throw new Error(`Could not load ticket ${id}: ${ticketError.message}`);
 
@@ -505,11 +505,7 @@ export const api = {
    */
   async assignTechnician(id, staffUser, estimatedTime = 'Within 24 Hours') {
     if (supabase) {
-      const { data: ticket, error: ticketError } = await supabase
-        .from('complaints')
-        .select('id, status')
-        .or(`ticket_number.eq.${id},id.eq.${id}`)
-        .single();
+      const { data: ticket, error: ticketError } = await findComplaintRow(id, 'id, status');
 
       if (ticketError) throw new Error(`Could not load ticket ${id}: ${ticketError.message}`);
 
@@ -583,11 +579,7 @@ export const api = {
     // 2. Best-effort Supabase sync
     if (supabase && updated) {
       try {
-        const { data: ticket } = await supabase
-          .from('complaints')
-          .select('id, upvotes, upvoted_by')
-          .or(`ticket_number.eq.${complaintId},id.eq.${complaintId}`)
-          .single();
+        const { data: ticket } = await findComplaintRow(complaintId, 'id, upvotes, upvoted_by');
 
         if (ticket) {
           await supabase
